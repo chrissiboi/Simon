@@ -5,16 +5,21 @@ import java.io.Serializable;
 /**
  * Created by User on 19.02.2015.
  */
+
 public class PlayerObject implements Serializable {
 
     int pushedButton;
     int userId;
-    int rightAnswerCounter = 0;
+    int rightAnswerCounter;
+    //0 = new user, 1 = pushedButton
+    int serverMessage;
     String username;
 
-    PlayerObject(int userId){
 
-        this.userId = userId;
+    PlayerObject(){
+
+        this.userId = 0;
+        this.rightAnswerCounter = 0;
 
     }
 

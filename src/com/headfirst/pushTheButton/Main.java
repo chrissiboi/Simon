@@ -1,27 +1,21 @@
 package com.headfirst.pushTheButton;
 
-import com.headfirst.chatProgram.SimpleChatClient;
-import sun.rmi.transport.ObjectTable;
-
-import javax.sound.midi.MidiEvent;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
-import javax.sound.midi.ShortMessage;
 import javax.sound.midi.Track;
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -138,6 +132,22 @@ public class Main {
 
         Box playerStatsBox = new Box(BoxLayout.X_AXIS);
         playerNameInput = new JTextField("User");
+        playerNameInput.addFocusListener(
+                new FocusListener() {
+
+                    @Override
+                    public void focusGained(FocusEvent e) {
+
+                    }
+
+                    @Override
+                    public void focusLost(FocusEvent e) {
+
+                        player1NameLabel.setText(playerNameInput.getText());
+
+                    }
+                }
+        );
         opponentNameLabel = new JLabel("No Player connected.");
         player1NameLabel = new JLabel(playerNameInput.getText());
         playerStatsBox.add(new JLabel("Name: "));
@@ -168,7 +178,8 @@ public class Main {
         */
         frame.setVisible(true);
 
-        player1 = new PlayerObject(1);
+        player1 = new PlayerObject();
+        player1.username = playerNameInput.getText();
 
 
         setUpNetworking();
@@ -192,6 +203,9 @@ public class Main {
             ois = new ObjectInputStream(is);
 
             statusArea.append("\nConnection established!");
+            player1.serverMessage = 2;
+            objectOutput.reset();
+            objectOutput.writeObject(player1);
 
         } catch(IOException e) {
             e.printStackTrace();
@@ -235,6 +249,7 @@ public class Main {
                 try {
 
                     player1.setPushedButton(pressedButton.getButtonID());
+                    player1.serverMessage = 1;
                     objectOutput.reset();
                     objectOutput.writeObject(player1);
 
@@ -307,10 +322,20 @@ public class Main {
 
                 while((playerObject = (PlayerObject) ois.readObject()) != null) {
 
-                    if(player1.userId != playerObject.userId) {
+                    if(player1.userId != playerObject.userId && playerObject.serverMessage == 1) {
 
+                        statusArea.append("\n" + playerObject.username + " pressed the " + playerObject.getPushedButton() + " Button");
                         opponentButtons[playerObject.getPushedButton() - 1].buttonPressed(sequencer, track, sequenc);
 
+                    }
+                    else if(player1.userId != playerObject.userId && playerObject.serverMessage == 0){
+
+                        opponentNameLabel.setText(playerObject.username);
+
+                    }
+                    else if(player1.getUserId() == 0 && playerObject.serverMessage == 2) {
+                        System.out.println("set user id");
+                        player1.setUserId(playerObject.getUserId());
                     }
 
                 }

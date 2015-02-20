@@ -1,12 +1,10 @@
 package com.headfirst.pushTheButton;
 
-import com.mysql.fabric.Server;
-import com.sun.corba.se.pept.encoding.InputObject;
-import com.sun.media.jfxmedia.events.PlayerEvent;
-
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * Created by User on 19.02.2015.
@@ -14,7 +12,9 @@ import java.net.Socket;
 public class ButtonServer {
 
     ObjectOutputStream oos;
-    PrintWriter writer;
+    ArrayList<PlayerObject> playerObjects;
+    ArrayList outputStreams;
+    int idCounter = 0;
 
     public class ClientHandler implements Runnable{
 
@@ -45,13 +45,27 @@ public class ButtonServer {
 
                 while((player = (PlayerObject) ois.readObject()) != null){
 
-                    System.out.println("Got Message!");
-                    tellOtherPlayer(player);
+                    System.out.println("Got Object!");
+
+                    if(player.serverMessage == 2) {
+
+                        PlayerObject po = new PlayerObject();
+                        po.setUserId(++idCounter);
+                        po.username = player.username;
+                        playerObjects.add(po);
+                        po.serverMessage = player.serverMessage;
+
+                        tellOtherPlayer(po);
+
+                    }
+                    else
+                        tellOtherPlayer(player);
 
                 }
 
             }catch(Exception ex) {
 
+                outputStreams.remove(oos);
                 System.out.println("User disconnected");
 
             }
@@ -62,16 +76,23 @@ public class ButtonServer {
 
     private void tellOtherPlayer(PlayerObject player) {
 
-        try {
+        Iterator it = outputStreams.iterator();
 
-            oos.reset();
-            oos.writeObject(player);
-            System.out.println("Told other players!");
+        while(it.hasNext()) {
+
+            try {
+
+                ObjectOutputStream oos = (ObjectOutputStream) it.next();
+                oos.reset();
+                oos.writeObject(player);
+                System.out.println("Told other players!");
 
 
-        } catch(Exception e) {
+            } catch(Exception e) {
 
-            e.printStackTrace();
+                e.printStackTrace();
+
+            }
 
         }
 
@@ -86,6 +107,9 @@ public class ButtonServer {
 
     public void start(){
 
+        outputStreams = new ArrayList();
+        playerObjects = new ArrayList<>();
+
         try{
 
             ServerSocket socket = new ServerSocket(3333);
@@ -97,6 +121,7 @@ public class ButtonServer {
                 ClientHandler handler = new ClientHandler(clientSocket);
                 OutputStream os = clientSocket.getOutputStream();
                 oos = new ObjectOutputStream(os);
+                outputStreams.add(oos);
 
                 Thread t = new Thread(handler);
                 t.start();
